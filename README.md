@@ -4,3 +4,4 @@ Change log
 02 Compose Text component
 03 Composable function
 04 Layout (Row) & data
+05 Layout (Column) & view model
