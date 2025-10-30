@@ -9,10 +9,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.example.myapp.todo.data.Item
 
 @Composable
-fun ItemDetail(item: Item) {
-    Log.d("ItemDetail", "recompose")
+fun ItemDetail(item: Item, onToggleDone: (itemId: Int) -> Unit) {
+    Log.d("ItemDetail", "recompose text = ${item.text}")
     Row {
-        Checkbox(checked = item.done, onCheckedChange = null)
+        Checkbox(checked = item.done, onCheckedChange = { onToggleDone(item.id) })
         Text(text = item.text)
     }
 }
@@ -20,5 +20,5 @@ fun ItemDetail(item: Item) {
 @Preview
 @Composable
 fun PreviewItemDetail() {
-    ItemDetail(Item(text = "Learn android", done = true))
+    ItemDetail(Item(id = 1, text = "Learn android", done = true), {})
 }

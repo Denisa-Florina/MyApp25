@@ -14,64 +14,16 @@ val TAG = "ItemAdd"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItemAdd() {
-    val mutableState = rememberSaveable { mutableStateOf("") }
-    Log.d(TAG, "recompose, text = ${mutableState.value}")
-    Row {
-        TextField(
-            value = mutableState.value,
-            onValueChange = { mutableState.value = it },
-            label = { Text("Text") }
-        )
-        Button(onClick = {
-            Log.d(TAG, "add todo");
-        }) {
-            Text("Add")
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ItemAdd2() {
-    val (text, setText) = rememberSaveable { mutableStateOf("") }
-    Log.d(TAG, "recompose, text = $text")
-    Row {
-        TextField(
-            value = text,
-            onValueChange = { setText(it) },
-            label = { Text("Text") }
-        )
-        Button(onClick = {
-            Log.d(TAG, "add todo");
-        }) {
-            Text("Add")
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ItemAdd3() {
+fun ItemAdd(itemsViewModel: ItemsViewModel) {
     var text by rememberSaveable { mutableStateOf("") }
-    Log.d(TAG, "recompose, text = $text")
+    Log.d("ItemAdd", "recompose, text = $text")
+
     Row {
-        TextField(
-            value = text,
-            onValueChange = { text = it },
-            label = { Text("Text") }
-        )
+        TextField(value = text, onValueChange = { text = it }, label = { Text("Text") })
         Button(onClick = {
-            Log.d(TAG, "add todo");
-        }) {
-            Text("Add")
-        }
+            Log.d("ItemAdd", "add item with text = $text");
+            itemsViewModel.addItem(text)
+            text = ""
+        }) { Text("Add") }
     }
-}
-
-
-@Preview
-@Composable
-fun PreviewItemAdd() {
-    ItemAdd()
 }
