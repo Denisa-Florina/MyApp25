@@ -8,3 +8,4 @@ Change log
 06 State
 07 ViewModel & state
 08 Navigation & repository
+09 List (LazyColumn)

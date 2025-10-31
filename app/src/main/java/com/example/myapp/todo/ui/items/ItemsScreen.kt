@@ -13,7 +13,7 @@ fun ItemsScreen(onItemClick: (id: String) -> Unit) {
     val itemsViewModel = viewModel<ItemsViewModel>()
     val itemsUiState = itemsViewModel.uiState
     ItemList(
-        items = itemsUiState.items,
+        itemList = itemsUiState.items,
         onItemClick = onItemClick,
     )
 }
