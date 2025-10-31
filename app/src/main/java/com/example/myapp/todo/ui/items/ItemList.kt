@@ -1,7 +1,6 @@
 package com.example.myapp.todo.ui.items
 
 import android.util.Log
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,8 +14,8 @@ typealias OnItemFn = (id: String) -> Unit
 
 @Composable
 fun ItemList(itemList: List<Item>, onItemClick: OnItemFn, modifier: Modifier) {
-    Log.d("ItemList", "recompose")
-    LazyColumn {
+    Log.d("ItemList", "recompose$itemList")
+    LazyColumn(modifier = modifier) {
         items(itemList) { item ->
             ItemDetail(item, onItemClick)
         }
@@ -25,7 +24,7 @@ fun ItemList(itemList: List<Item>, onItemClick: OnItemFn, modifier: Modifier) {
 
 @Composable
 fun ItemDetail(item: Item, onItemClick: OnItemFn) {
-    Log.d("ItemDetail", "recompose id = ${item.id}")
+    Log.d("ItemDetail", "recompose id = ${item}")
     Row {
         ClickableText(text = AnnotatedString(item.text), onClick = { onItemClick(item.id) })
     }
