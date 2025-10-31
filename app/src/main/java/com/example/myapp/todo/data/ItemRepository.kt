@@ -1,51 +1,45 @@
 package com.example.myapp.todo.data
 
 import android.util.Log
+import com.example.myapp.core.TAG
 import com.example.myapp.todo.data.remote.ItemService
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 
-object ItemRepository {
-    val items: List<Item> = ItemService.items
+class ItemRepository(private val itemService: ItemService) {
+    private var cachedItems: MutableList<Item> = listOf<Item>().toMutableList()
 
-    fun update(id: String, text: String): Item? {
-        Log.d("ItemRepository", "update $id")
-        val index = ItemService.items.indexOfFirst { it -> it.id == id }
+    init {
+        Log.d(TAG, "init")
+    }
+
+    suspend fun loadAll(): List<Item> {
+        Log.d(TAG, "loadAll")
+        val items = itemService.find();
+        Log.d(TAG, "loadAll succeeded ${items.size}")
+        cachedItems = items.toMutableList()
+        return cachedItems as List<Item>
+    }
+
+    suspend fun load(itemId: String?): Item {
+        Log.d(TAG, "load $itemId")
+        return itemService.read(itemId)
+    }
+
+    suspend fun update(item: Item): Item {
+        Log.d(TAG, "update $item")
+        val updatedItem = itemService.update(item.id, item)
+        val index = cachedItems.indexOfFirst { it.id == item.id }
         if (index != -1) {
-            val item = items[index].copy(text = text)
-            ItemService.items.set(index, item)
-            return item
+            cachedItems.set(index, updatedItem)
         }
-        return null
+        return updatedItem
     }
 
-    suspend fun loadItems(): List<Item> {
-        Log.d("ItemRepository", "loadItems...")        // Main
-        return withContext(Dispatchers.IO) {
-            val items = ItemService.getItems();                  // IO
-            Log.d("ItemRepository", "loadItems $items") // IO
-            return@withContext items;                            // IO
-        }
+    suspend fun save(item: Item): Item {
+        Log.d(TAG, "save $item")
+        val createdItem = itemService.create(item)
+        cachedItems.add(0, createdItem);
+        return createdItem
     }
 
-    suspend fun loadOtherItems(): List<Item> {
-        Log.d("ItemRepository", "loadOtherItems...")   // Main
-        return withContext(Dispatchers.Default) {
-            val deferred1 = async { getOtherItems(2) }    // Default
-            val deferred2 = async { getOtherItems(3) }    // Default
-            val (list1, list2) = awaitAll(deferred1, deferred2) // wait for both
-//            val list1 = deferred1.await() // sequentially
-//            val list2 = deferred1.await()
-            return@withContext list1.plus(list2)
-        }
-    }
-
-    suspend fun getOtherItems(index: Int): List<Item> { // Default
-        Log.d("ItemService", "getOtherItems...")
-        delay(10000)
-        return items.subList(index, index + 1)
-    }
+    fun getItem(itemId: String?): Item? = cachedItems?.find { it.id == itemId }
 }

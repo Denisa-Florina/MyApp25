@@ -5,35 +5,45 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.myapp.MyApplication
+import com.example.myapp.core.Result
+import com.example.myapp.core.TAG
 import com.example.myapp.todo.data.Item
 import com.example.myapp.todo.data.ItemRepository
 import kotlinx.coroutines.launch
 
-data class ItemsUiState(val items: List<Item>)
-
-class ItemsViewModel : ViewModel() {
-    companion object {
-        val TAG = "ItemsViewModel"
-    }
-
-    var uiState: ItemsUiState by mutableStateOf(ItemsUiState(listOf()))
+class ItemsViewModel(private val itemRepository: ItemRepository) : ViewModel() {
+    var uiState: Result<List<Item>> by mutableStateOf(Result.Loading)
         private set
 
     init {
         Log.d(TAG, "init")
-        loadData()
+        loadItems()
     }
 
-    private fun loadData() {
+    fun loadItems() {
+        Log.d(TAG, "loadItems")
         viewModelScope.launch {
-            Log.d(TAG, "loadData...")                         // Main
-            val items = ItemRepository.loadItems();                // IO
-            Log.d(TAG, "loadData items")                      // Main
-            uiState = ItemsUiState(items)                          // Main
-            val otherItems = ItemRepository.loadOtherItems()       // Default
-            Log.d(TAG, "loadData other items")                // Main
-            uiState = ItemsUiState(uiState.items.plus(otherItems)) // Main
+            uiState = Result.Loading
+            uiState = try {
+                Result.Success(itemRepository.loadAll())
+            } catch (e: Exception) {
+                Result.Error(e)
+            }
+        }
+    }
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val app =
+                    (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as MyApplication)
+                ItemsViewModel(app.container.itemRepository)
+            }
         }
     }
 }
