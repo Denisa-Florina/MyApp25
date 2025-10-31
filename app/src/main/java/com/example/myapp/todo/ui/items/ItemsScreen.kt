@@ -49,6 +49,7 @@ fun ItemsScreen(onItemClick: (id: String?) -> Unit, onAddItem: () -> Unit) {
             is Result.Loading -> CircularProgressIndicator(modifier = Modifier.padding(it))
             is Result.Error -> Text(
                 text = "Failed to load items - ${itemsUiState.exception?.message}",
+                modifier = Modifier.padding(it)
             )
         }
     }

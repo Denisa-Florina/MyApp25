@@ -26,13 +26,11 @@ class ItemsViewModel(private val itemRepository: ItemRepository) : ViewModel() {
     }
 
     fun loadItems() {
-        Log.d(TAG, "loadItems")
+        Log.d(TAG, "loadItems...")
         viewModelScope.launch {
-            uiState = Result.Loading
-            uiState = try {
-                Result.Success(itemRepository.loadAll())
-            } catch (e: Exception) {
-                Result.Error(e)
+            itemRepository.loadAll().collect { result ->
+                Log.d(TAG, "loadItems collect")
+                uiState = result
             }
         }
     }
