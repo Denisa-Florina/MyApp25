@@ -23,6 +23,7 @@ class ItemsViewModel(private val itemRepository: ItemRepository) : ViewModel() {
     init {
         Log.d(TAG, "init")
         loadItems()
+        listenItemEvents()
     }
 
     fun loadItems() {
@@ -32,6 +33,12 @@ class ItemsViewModel(private val itemRepository: ItemRepository) : ViewModel() {
                 Log.d(TAG, "loadItems collect")
                 uiState = result
             }
+        }
+    }
+
+    fun listenItemEvents() {
+        viewModelScope.launch {
+            itemRepository.listenSocketEvents()
         }
     }
 
