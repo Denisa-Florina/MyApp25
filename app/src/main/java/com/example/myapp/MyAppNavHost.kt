@@ -2,15 +2,24 @@ package com.example.myapp
 
 import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.myapp.auth.LoginScreen
+import com.example.myapp.core.data.UserPreferences
+import com.example.myapp.core.data.remote.Api
+import com.example.myapp.core.ui.UserPreferencesViewModel
 import com.example.myapp.todo.ui.ItemScreen
 import com.example.myapp.todo.ui.items.ItemsScreen
 
 val itemsRoute = "items"
+val authRoute = "auth"
 
 @Composable
 fun MyAppNavHost() {
@@ -19,9 +28,15 @@ fun MyAppNavHost() {
         Log.d("MyAppNavHost", "navigate back to list")
         navController.popBackStack()
     }
+    val userPreferencesViewModel =
+        viewModel<UserPreferencesViewModel>(factory = UserPreferencesViewModel.Factory)
+    val userPreferencesUiState by userPreferencesViewModel.uiState.collectAsStateWithLifecycle(
+        initialValue = UserPreferences()
+    )
+    val myAppViewModel = viewModel<MyAppViewModel>(factory = MyAppViewModel.Factory)
     NavHost(
         navController = navController,
-        startDestination = itemsRoute
+        startDestination = authRoute
     ) {
         composable(itemsRoute) {
             ItemsScreen(
@@ -32,8 +47,15 @@ fun MyAppNavHost() {
                 onAddItem = {
                     Log.d("MyAppNavHost", "navigate to new item")
                     navController.navigate("$itemsRoute-new")
-                }
-            )
+                },
+                onLogout = {
+                    Log.d("MyAppNavHost", "logout")
+                    myAppViewModel.logout()
+                    Api.tokenInterceptor.token = null
+                    navController.navigate(authRoute) {
+                        popUpTo(0)
+                    }
+                })
         }
         composable(
             route = "$itemsRoute/{id}",
@@ -51,6 +73,25 @@ fun MyAppNavHost() {
                 itemId = null,
                 onClose = { onCloseItem() }
             )
+        }
+        composable(route = authRoute)
+        {
+            LoginScreen(
+                onClose = {
+                    Log.d("MyAppNavHost", "navigate to list")
+                    navController.navigate(itemsRoute)
+                }
+            )
+        }
+    }
+    LaunchedEffect(userPreferencesUiState.token) {
+        if (userPreferencesUiState.token.isNotEmpty()) {
+            Log.d("MyAppNavHost", "Lauched effect navigate to items")
+            Api.tokenInterceptor.token = userPreferencesUiState.token
+            myAppViewModel.setToken(userPreferencesUiState.token)
+            navController.navigate(itemsRoute) {
+                popUpTo(0)
+            }
         }
     }
 }

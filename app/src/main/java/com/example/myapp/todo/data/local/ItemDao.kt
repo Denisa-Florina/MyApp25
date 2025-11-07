@@ -16,10 +16,13 @@ interface ItemDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: Item)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(items: List<Item>)
+
     @Update
     suspend fun update(item: Item): Int
 
-    @Query("DELETE FROM Items WHERE id = :id")
+    @Query("DELETE FROM Items WHERE _id = :id")
     suspend fun deleteById(id: String): Int
 
     @Query("DELETE FROM Items")

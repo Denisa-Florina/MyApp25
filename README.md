@@ -17,3 +17,4 @@ Change log
 15 Shared flow
 16 Flow as state
 17 Room database
+18 Data store

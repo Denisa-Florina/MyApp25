@@ -1,8 +1,8 @@
 package com.example.myapp.todo.data.remote
 
 import android.util.Log
-import com.example.myapp.core.Api
 import com.example.myapp.core.TAG
+import com.example.myapp.core.data.remote.Api
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import kotlinx.coroutines.Dispatchers
@@ -65,13 +65,26 @@ class ItemWsClient(private val okHttpClient: OkHttpClient) {
         override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {}
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-            Log.d(TAG, "onClosed bytes $code $reason")
+            Log.d(TAG, "onMessage bytes $code $reason")
             onClosed()
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-            Log.d(TAG, "onFailure bytes $t")
+            Log.d(TAG, "onMessage bytes $t")
             onFailure()
         }
+    }
+
+    fun authorize(token: String) {
+        val auth = """
+            {
+              "type":"authorization",
+              "payload":{
+                "token": "$token"
+              }
+            }
+        """.trimIndent()
+        Log.d(TAG, "auth $auth")
+        webSocket.send(auth)
     }
 }

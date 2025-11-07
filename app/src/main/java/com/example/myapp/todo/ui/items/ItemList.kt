@@ -33,11 +33,11 @@ fun ItemList(itemList: List<Item>, onItemClick: OnItemFn, modifier: Modifier) {
 
 @Composable
 fun ItemDetail(item: Item, onItemClick: OnItemFn) {
-    Log.d("ItemDetail", "recompose id = ${item.id}")
+//    Log.d("ItemDetail", "recompose id = ${item.id}")
     Row {
         ClickableText(text = AnnotatedString(item.text),
             style = TextStyle(
                 fontSize = 24.sp,
-            ), onClick = { onItemClick(item.id) })
+            ), onClick = { onItemClick(item._id) })
     }
 }

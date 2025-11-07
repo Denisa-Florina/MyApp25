@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -21,7 +22,7 @@ import com.example.myapp.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItemsScreen(onItemClick: (id: String?) -> Unit, onAddItem: () -> Unit) {
+fun ItemsScreen(onItemClick: (id: String?) -> Unit, onAddItem: () -> Unit, onLogout: () -> Unit) {
     Log.d("ItemsScreen", "recompose")
     val itemsViewModel = viewModel<ItemsViewModel>(factory = ItemsViewModel.Factory)
     val itemsUiState by itemsViewModel.uiState.collectAsStateWithLifecycle(
@@ -29,7 +30,12 @@ fun ItemsScreen(onItemClick: (id: String?) -> Unit, onAddItem: () -> Unit) {
     )
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(text = stringResource(id = R.string.items)) })
+            TopAppBar(
+                title = { Text(text = stringResource(id = R.string.items)) },
+                actions = {
+                    Button(onClick = onLogout) { Text("Logout") }
+                }
+            )
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -51,5 +57,5 @@ fun ItemsScreen(onItemClick: (id: String?) -> Unit, onAddItem: () -> Unit) {
 @Preview
 @Composable
 fun PreviewItemsScreen() {
-    ItemsScreen(onItemClick = {}, onAddItem = {})
+    ItemsScreen(onItemClick = {}, onAddItem = {}, onLogout = {})
 }

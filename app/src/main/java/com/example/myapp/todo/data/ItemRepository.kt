@@ -2,6 +2,7 @@ package com.example.myapp.todo.data
 
 import android.util.Log
 import com.example.myapp.core.TAG
+import com.example.myapp.core.data.remote.Api
 import com.example.myapp.todo.data.local.ItemDao
 import com.example.myapp.todo.data.remote.ItemEvent
 import com.example.myapp.todo.data.remote.ItemService
@@ -23,10 +24,12 @@ class ItemRepository(
         Log.d(TAG, "init")
     }
 
+    private fun getBearerToken() = "Bearer ${Api.tokenInterceptor.token}"
+
     suspend fun refresh() {
         Log.d(TAG, "refresh started")
         try {
-            val items = itemService.find()
+            val items = itemService.find(authorization = getBearerToken())
             itemDao.deleteAll()
             items.forEach { itemDao.insert(it) }
             Log.d(TAG, "refresh succeeded")
@@ -42,10 +45,10 @@ class ItemRepository(
                 Log.d(TAG, "Item event collected $it")
                 if (it.isSuccess) {
                     val itemEvent = it.getOrNull();
-                    when (itemEvent?.event) {
-                        "created" -> handleItemCreated(itemEvent.payload.item)
-                        "updated" -> handleItemUpdated(itemEvent.payload.item)
-                        "deleted" -> handleItemDeleted(itemEvent.payload.item)
+                    when (itemEvent?.type) {
+                        "created" -> handleItemCreated(itemEvent.payload)
+                        "updated" -> handleItemUpdated(itemEvent.payload)
+                        "deleted" -> handleItemDeleted(itemEvent.payload)
                     }
                 }
             }
@@ -75,7 +78,8 @@ class ItemRepository(
 
     suspend fun update(item: Item): Item {
         Log.d(TAG, "update $item...")
-        val updatedItem = itemService.update(item.id, item)
+        val updatedItem =
+            itemService.update(itemId = item._id, item = item, authorization = getBearerToken())
         Log.d(TAG, "update $item succeeded")
         handleItemUpdated(updatedItem)
         return updatedItem
@@ -83,7 +87,7 @@ class ItemRepository(
 
     suspend fun save(item: Item): Item {
         Log.d(TAG, "save $item...")
-        val createdItem = itemService.create(item)
+        val createdItem = itemService.create(item = item, authorization = getBearerToken())
         Log.d(TAG, "save $item succeeded")
         handleItemCreated(createdItem)
         return createdItem
@@ -101,5 +105,13 @@ class ItemRepository(
     private suspend fun handleItemCreated(item: Item) {
         Log.d(TAG, "handleItemCreated...")
         itemDao.insert(item)
+    }
+
+    suspend fun deleteAll() {
+        itemDao.deleteAll()
+    }
+
+    fun setToken(token: String) {
+        itemWsClient.authorize(token)
     }
 }
