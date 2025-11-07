@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Scaffold
@@ -17,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -44,6 +46,18 @@ fun ItemScreen(itemId: String?, onClose: () -> Unit) {
         }
     }
 
+    var textInitialized by remember { mutableStateOf(itemId == null) }
+    LaunchedEffect(itemId, itemUiState.loadResult) {
+        Log.d("ItemScreen", "Text initialized = ${itemUiState.loadResult}");
+        if (textInitialized) {
+            return@LaunchedEffect
+        }
+        if (!(itemUiState.loadResult is Result.Loading)) {
+            text = itemUiState.item.text
+            textInitialized = true
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -62,11 +76,18 @@ fun ItemScreen(itemId: String?, onClose: () -> Unit) {
                 .padding(it)
                 .fillMaxSize()
         ) {
+            if (itemUiState.loadResult is Result.Loading) {
+                CircularProgressIndicator()
+                return@Scaffold
+            }
             if (itemUiState.submitResult is Result.Loading) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) { LinearProgressIndicator() }
+            }
+            if (itemUiState.loadResult is Result.Error) {
+                Text(text = "Failed to load item - ${(itemUiState.loadResult as Result.Error).exception?.message}")
             }
             Row {
                 TextField(

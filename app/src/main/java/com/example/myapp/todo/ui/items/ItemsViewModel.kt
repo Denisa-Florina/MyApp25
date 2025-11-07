@@ -14,6 +14,7 @@ import com.example.myapp.core.Result
 import com.example.myapp.core.TAG
 import com.example.myapp.todo.data.Item
 import com.example.myapp.todo.data.ItemRepository
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class ItemsViewModel(private val itemRepository: ItemRepository) : ViewModel() {
@@ -23,22 +24,16 @@ class ItemsViewModel(private val itemRepository: ItemRepository) : ViewModel() {
     init {
         Log.d(TAG, "init")
         loadItems()
-        listenItemEvents()
     }
 
     fun loadItems() {
         Log.d(TAG, "loadItems...")
         viewModelScope.launch {
-            itemRepository.loadAll().collect { result ->
+            itemRepository.refresh()
+            itemRepository.itemStream.collectLatest { result ->
                 Log.d(TAG, "loadItems collect")
                 uiState = result
             }
-        }
-    }
-
-    fun listenItemEvents() {
-        viewModelScope.launch {
-            itemRepository.listenSocketEvents()
         }
     }
 

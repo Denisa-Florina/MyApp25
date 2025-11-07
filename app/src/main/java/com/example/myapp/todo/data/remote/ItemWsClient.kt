@@ -3,6 +3,8 @@ package com.example.myapp.todo.data.remote
 import android.util.Log
 import com.example.myapp.core.Api
 import com.example.myapp.core.TAG
+import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.Moshi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -17,7 +19,7 @@ class ItemWsClient(private val okHttpClient: OkHttpClient) {
     lateinit var webSocket: WebSocket
 
     suspend fun openSocket(
-        onEvent: (text: String) -> Unit,
+        onEvent: (itemEvent: ItemEvent?) -> Unit,
         onClosed: () -> Unit,
         onFailure: () -> Unit
     ) {
@@ -38,33 +40,37 @@ class ItemWsClient(private val okHttpClient: OkHttpClient) {
     }
 
     inner class ItemWebSocketListener(
-        private val onEvent: (text: String) -> Unit,
+        private val onEvent: (itemEvent: ItemEvent?) -> Unit,
         private val onClosed: () -> Unit,
         private val onFailure: () -> Unit
     ) : WebSocketListener() {
+        private val moshi = Moshi.Builder().build()
+        private val itemEventJsonAdapter: JsonAdapter<ItemEvent> =
+            moshi.adapter(ItemEvent::class.java)
+
         override fun onOpen(webSocket: WebSocket, response: Response) {
             Log.d(TAG, "onOpen")
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
             Log.d(TAG, "onMessage string $text")
-            onEvent(text)
+            val itemEvent = itemEventJsonAdapter.fromJson(text)
+            onEvent(itemEvent)
         }
 
         override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
             Log.d(TAG, "onMessage bytes $bytes")
-            onEvent(bytes.toString())
         }
 
         override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {}
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-            Log.d(TAG, "onMessage bytes $code $reason")
+            Log.d(TAG, "onClosed bytes $code $reason")
             onClosed()
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-            Log.d(TAG, "onMessage bytes $t")
+            Log.d(TAG, "onFailure bytes $t")
             onFailure()
         }
     }

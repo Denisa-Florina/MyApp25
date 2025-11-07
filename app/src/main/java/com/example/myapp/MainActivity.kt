@@ -7,8 +7,10 @@ import androidx.activity.compose.setContent
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.lifecycleScope
 import com.example.myapp.core.TAG
 import com.example.myapp.ui.theme.MyAppTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -18,6 +20,20 @@ class MainActivity : ComponentActivity() {
             MyApp {
                 MyAppNavHost()
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        lifecycleScope.launch {
+            (application as MyApplication).container.itemRepository.openWsClient()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        lifecycleScope.launch {
+            (application as MyApplication).container.itemRepository.closeWsClient()
         }
     }
 }

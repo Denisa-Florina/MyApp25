@@ -18,20 +18,43 @@ import kotlinx.coroutines.launch
 
 data class ItemUiState(
     val itemId: String? = null,
-    val item: Item,
+    val item: Item = Item(),
+    var loadResult: Result<Item>? = null,
     var submitResult: Result<Item>? = null,
 )
 
 class ItemViewModel(private val itemId: String?, private val itemRepository: ItemRepository) :
     ViewModel() {
+
+    var uiState: ItemUiState by mutableStateOf(ItemUiState(loadResult = Result.Loading))
+        private set
+
     init {
         Log.d(TAG, "init")
+        if (itemId != null) {
+            loadItem()
+        } else {
+            uiState = uiState.copy(loadResult = Result.Success(Item()))
+        }
     }
 
-    var uiState: ItemUiState by mutableStateOf(
-        ItemUiState(item = itemRepository.getItem(itemId)?.copy() ?: Item())
-    )
-        private set
+    fun loadItem() {
+        viewModelScope.launch {
+            itemRepository.itemStream.collect { result ->
+                if (!(uiState.loadResult is Result.Loading)) {
+                    return@collect
+                }
+                if (result is Result.Success) {
+                    val items = result.data
+                    val item = items.find { it.id == itemId } ?: Item()
+                    uiState = uiState.copy(loadResult = Result.Success(item), item = item)
+                } else if (result is Result.Error) {
+                    uiState =
+                        uiState.copy(loadResult = Result.Error(result.exception))
+                }
+            }
+        }
+    }
 
     fun saveOrUpdateItem(text: String) {
         viewModelScope.launch {
