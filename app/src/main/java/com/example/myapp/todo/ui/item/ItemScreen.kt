@@ -1,4 +1,4 @@
-package com.example.myapp.todo.ui
+package com.example.myapp.todo.ui.item
 
 import android.util.Log
 import androidx.compose.foundation.layout.Column
@@ -28,7 +28,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapp.R
 import com.example.myapp.core.Result
-import com.example.myapp.todo.ui.item.ItemViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,30 +76,33 @@ fun ItemScreen(itemId: String?, onClose: () -> Unit) {
                 .fillMaxSize()
         ) {
             if (itemUiState.loadResult is Result.Loading) {
-                CircularProgressIndicator()
-                return@Scaffold
-            }
-            if (itemUiState.submitResult is Result.Loading) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
-                ) { LinearProgressIndicator() }
-            }
-            if (itemUiState.loadResult is Result.Error) {
-                Text(text = "Failed to load item - ${(itemUiState.loadResult as Result.Error).exception?.message}")
-            }
-            Row {
-                TextField(
-                    value = text,
-                    onValueChange = { text = it }, label = { Text("Text") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            if (itemUiState.submitResult is Result.Error) {
-                Text(
-                    text = "Failed to submit item - ${(itemUiState.submitResult as Result.Error).exception?.message}",
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                ) { CircularProgressIndicator() }
+            } else {
+                if (itemUiState.submitResult is Result.Loading) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) { LinearProgressIndicator() }
+                }
+                if (itemUiState.loadResult is Result.Error) {
+                    Text(text = "Failed to load item - ${(itemUiState.loadResult as Result.Error).exception?.message}")
+                }
+                Row {
+                    TextField(
+                        value = text,
+                        onValueChange = { text = it }, label = { Text("Text") },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                if (itemUiState.submitResult is Result.Error) {
+                    Text(
+                        text = "Failed to submit item - ${(itemUiState.submitResult as Result.Error).exception?.message}",
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
     }
