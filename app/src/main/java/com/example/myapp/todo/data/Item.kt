@@ -1,3 +1,7 @@
 package com.example.myapp.todo.data
 
-data class Item(val id: String? = null, val text: String = "")
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "items")
+data class Item(@PrimaryKey val id: String = "", val text: String = "")

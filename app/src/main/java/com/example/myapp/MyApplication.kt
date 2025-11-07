@@ -26,6 +26,6 @@ class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "init")
-        container = AppContainer()
+        container = AppContainer(this)
     }
 }

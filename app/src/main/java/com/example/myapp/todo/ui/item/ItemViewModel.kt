@@ -40,21 +40,16 @@ class ItemViewModel(private val itemId: String?, private val itemRepository: Ite
 
     fun loadItem() {
         viewModelScope.launch {
-            itemRepository.itemStream.collect { result ->
+            itemRepository.itemStream.collect { items ->
                 if (!(uiState.loadResult is Result.Loading)) {
                     return@collect
                 }
-                if (result is Result.Success) {
-                    val items = result.data
-                    val item = items.find { it.id == itemId } ?: Item()
-                    uiState = uiState.copy(loadResult = Result.Success(item), item = item)
-                } else if (result is Result.Error) {
-                    uiState =
-                        uiState.copy(loadResult = Result.Error(result.exception))
-                }
+                val item = items.find { it.id == itemId } ?: Item()
+                uiState = uiState.copy(item = item, loadResult = Result.Success(item))
             }
         }
     }
+
 
     fun saveOrUpdateItem(text: String) {
         viewModelScope.launch {

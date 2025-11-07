@@ -7,22 +7,14 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.myapp.MyApplication
-import com.example.myapp.core.Result
 import com.example.myapp.core.TAG
 import com.example.myapp.todo.data.Item
 import com.example.myapp.todo.data.ItemRepository
-import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 class ItemsViewModel(private val itemRepository: ItemRepository) : ViewModel() {
-    val uiState: StateFlow<Result<List<Item>>> = itemRepository.itemStream.stateIn(
-        scope = viewModelScope,
-        started = WhileSubscribed(),
-        initialValue = Result.Loading
-
-    )
+    val uiState: Flow<List<Item>> = itemRepository.itemStream
 
     init {
         Log.d(TAG, "init")
