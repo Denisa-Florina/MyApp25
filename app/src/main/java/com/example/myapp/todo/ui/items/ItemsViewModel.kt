@@ -1,9 +1,6 @@
 package com.example.myapp.todo.ui.items
 
 import android.util.Log
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -14,12 +11,18 @@ import com.example.myapp.core.Result
 import com.example.myapp.core.TAG
 import com.example.myapp.todo.data.Item
 import com.example.myapp.todo.data.ItemRepository
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class ItemsViewModel(private val itemRepository: ItemRepository) : ViewModel() {
-    var uiState: Result<List<Item>> by mutableStateOf(Result.Loading)
-        private set
+    val uiState: StateFlow<Result<List<Item>>> = itemRepository.itemStream.stateIn(
+        scope = viewModelScope,
+        started = WhileSubscribed(),
+        initialValue = Result.Loading
+
+    )
 
     init {
         Log.d(TAG, "init")
@@ -30,10 +33,6 @@ class ItemsViewModel(private val itemRepository: ItemRepository) : ViewModel() {
         Log.d(TAG, "loadItems...")
         viewModelScope.launch {
             itemRepository.refresh()
-            itemRepository.itemStream.collectLatest { result ->
-                Log.d(TAG, "loadItems collect")
-                uiState = result
-            }
         }
     }
 

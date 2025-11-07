@@ -11,7 +11,6 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.withContext
 
@@ -23,7 +22,7 @@ class ItemRepository(private val itemService: ItemService, private val itemWsCli
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    val itemStream: SharedFlow<Result<List<Item>>> = itemsFlow
+    val itemStream: Flow<Result<List<Item>>> = itemsFlow
 
     init {
         Log.d(TAG, "init")
