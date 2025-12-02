@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ItemDao {
-    @Query("SELECT * FROM Items")
+    @Query("SELECT * FROM items")
     fun getAll(): Flow<List<Item>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -22,9 +22,9 @@ interface ItemDao {
     @Update
     suspend fun update(item: Item): Int
 
-    @Query("DELETE FROM Items WHERE _id = :id")
+    @Query("DELETE FROM items WHERE _id = :id")
     suspend fun deleteById(id: String): Int
 
-    @Query("DELETE FROM Items")
+    @Query("DELETE FROM items")
     suspend fun deleteAll()
 }

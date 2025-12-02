@@ -13,6 +13,8 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import okio.ByteString
+import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
+import java.util.Date
 
 class ItemWsClient(private val okHttpClient: OkHttpClient) {
 
@@ -44,7 +46,11 @@ class ItemWsClient(private val okHttpClient: OkHttpClient) {
         private val onClosed: () -> Unit,
         private val onFailure: () -> Unit
     ) : WebSocketListener() {
-        private val moshi = Moshi.Builder().build()
+        val moshi = Moshi.Builder()
+            .add(Date::class.java, Rfc3339DateJsonAdapter()) // <-- just this
+            .build()
+
+
         private val itemEventJsonAdapter: JsonAdapter<ItemEvent> =
             moshi.adapter(ItemEvent::class.java)
 

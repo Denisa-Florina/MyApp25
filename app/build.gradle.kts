@@ -43,6 +43,7 @@ android {
 }
 
 dependencies {
+    implementation("com.squareup.moshi:moshi-adapters:1.15.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -72,4 +73,9 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    // 2. Ensure you have the Moshi library
+    implementation("com.squareup.moshi:moshi:1.15.1")
+
+    // 3. CRITICAL: Add the code generator via KSP
+    ksp("com.squareup.moshi:moshi-kotlin-codegen:1.15.1")
 }
