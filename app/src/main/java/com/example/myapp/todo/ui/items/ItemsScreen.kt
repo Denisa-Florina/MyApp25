@@ -22,12 +22,17 @@ import com.example.myapp.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItemsScreen(onItemClick: (id: String?) -> Unit, onAddItem: () -> Unit, onLogout: () -> Unit) {
+fun ItemsScreen(
+    onItemClick: (id: String?) -> Unit,
+    onAddItem: () -> Unit,
+    onLogout: () -> Unit
+) {
     Log.d("ItemsScreen", "recompose")
     val itemsViewModel = viewModel<ItemsViewModel>(factory = ItemsViewModel.Factory)
     val itemsUiState by itemsViewModel.uiState.collectAsStateWithLifecycle(
         initialValue = listOf()
     )
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -49,6 +54,10 @@ fun ItemsScreen(onItemClick: (id: String?) -> Unit, onAddItem: () -> Unit, onLog
         ItemList(
             itemList = itemsUiState,
             onItemClick = onItemClick,
+            onDeleteItem = { itemId ->
+                Log.d("ItemsScreen", "delete item $itemId")
+                itemId?.let { itemsViewModel.deleteItem(it) }
+            },
             modifier = Modifier.padding(it)
         )
     }

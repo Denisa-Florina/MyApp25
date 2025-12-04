@@ -17,8 +17,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             Log.d(TAG, "onCreate")
-            MyApp {
-                MyAppNavHost()
+            MyAppTheme {
+                Surface {
+                    MyAppNavHost()
+                }
             }
         }
     }
@@ -38,20 +40,12 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable
-fun MyApp(content: @Composable () -> Unit) {
-    Log.d("MyApp", "recompose")
-    MyAppTheme {
-        Surface {
-            content()
-        }
-    }
-}
-
 @Preview
 @Composable
 fun PreviewMyApp() {
-    MyApp {
-        MyAppNavHost()
+    MyAppTheme {
+        Surface {
+            MyAppNavHost()
+        }
     }
 }

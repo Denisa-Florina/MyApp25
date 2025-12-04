@@ -118,6 +118,26 @@ class ItemRepository(
         }
     }
 
+    suspend fun delete(itemId: String) {
+        Log.d(TAG, "delete $itemId...")
+        // Delete Local immediately (Optimistic UI)
+        itemDao.deleteById(itemId)
+
+        try {
+            // Delete from Server
+            itemService.delete(
+                itemId = itemId,
+                authorization = getBearerToken()
+            )
+            Log.d(TAG, "delete succeeded on server")
+        } catch (e: Exception) {
+            Log.e(TAG, "Server delete failed", e)
+            // If server fails, the local item is already deleted.
+            // You might want to restore it or queue for retry.
+            throw e
+        }
+    }
+
     private suspend fun handleItemDeleted(item: Item) {
         Log.d(TAG, "handleItemDeleted $item")
         itemDao.deleteById(item._id)
