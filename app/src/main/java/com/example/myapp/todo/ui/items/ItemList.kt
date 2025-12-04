@@ -35,6 +35,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.ui.graphics.RectangleShape
 
 typealias OnItemFn = (id: String?) -> Unit
 @Composable
@@ -57,7 +58,6 @@ fun ItemList(
 
 @Composable
 fun ItemDetailCard(item: Item, onItemClick: OnItemFn, onDeleteItem: OnItemFn) {
-    // Gray out completed items
     val cardColors = if (item.isCompleted) {
         CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
@@ -80,7 +80,6 @@ fun ItemDetailCard(item: Item, onItemClick: OnItemFn, onDeleteItem: OnItemFn) {
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Priority Dot
             PriorityIndicator(item.priority)
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -137,13 +136,13 @@ fun ItemDetailCard(item: Item, onItemClick: OnItemFn, onDeleteItem: OnItemFn) {
 @Composable
 fun PriorityIndicator(priority: Int) {
     val color = when (priority) {
-        in 3..Int.MAX_VALUE -> MaterialTheme.colorScheme.error // High (Red)
-        2 -> Color(0xFFFFA000) // Med (Amber)
-        else -> Color(0xFF4CAF50) // Low (Green)
+        in 4..Int.MAX_VALUE -> MaterialTheme.colorScheme.error
+        3 -> Color(0xFFFFA000)
+        else -> Color(0xFF4CAF50)
     }
     Box(
         modifier = Modifier
             .size(12.dp)
-            .background(color = color, shape = CircleShape)
+            .background(color = color, shape = RectangleShape)
     )
 }
