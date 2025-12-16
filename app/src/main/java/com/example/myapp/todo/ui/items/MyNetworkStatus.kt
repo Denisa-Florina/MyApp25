@@ -1,6 +1,8 @@
 package com.example.myapp.todo.ui.items
 
 import android.app.Application
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -16,43 +18,62 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.myapp.todo.ui.items.ConnectivityManagerNetworkMonitor
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
-class MyNetworkStatusViewModel(application: Application) : AndroidViewModel(application) {
+class MyNetworkStatusViewModel(application: Application)
+    : AndroidViewModel(application) {
+
     var uiState by mutableStateOf(false)
         private set
 
     init {
+        createNetworkNotificationChannel(application)
         collectNetworkStatus()
     }
 
-    private fun collectNetworkStatus() {
-        viewModelScope.launch {
-            ConnectivityManagerNetworkMonitor(getApplication()).isOnline.collect {
-                uiState = it;
+    companion object {
+        fun Factory(application: Application): ViewModelProvider.Factory =
+            viewModelFactory {
+                initializer {
+                    MyNetworkStatusViewModel(application)
+                }
             }
-        }
     }
 
-    companion object {
-        fun Factory(application: Application): ViewModelProvider.Factory = viewModelFactory {
-            initializer {
-                MyNetworkStatusViewModel(application)
-            }
+
+    private fun collectNetworkStatus() {
+        viewModelScope.launch {
+            ConnectivityManagerNetworkMonitor(getApplication())
+                .isOnline
+                .distinctUntilChanged()
+                .collect { isOnline ->
+                    uiState = isOnline
+
+                    // Only show notification if permission granted (Android 13+)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        val permissionGranted =
+                            ContextCompat.checkSelfPermission(
+                                getApplication(),
+                                Manifest.permission.POST_NOTIFICATIONS
+                            ) == PackageManager.PERMISSION_GRANTED
+                        if (!permissionGranted) return@collect
+                    }
+
+                    showNetworkStatusNotification(getApplication(), isOnline)
+                }
         }
     }
 }
@@ -95,4 +116,3 @@ fun NetworkStatusIcon(isOnline: Boolean) {
         }
     }
 }
-

@@ -21,7 +21,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapp.R
-
+import com.example.myapp.todo.ui.items.MyNetworkStatusViewModel
+import com.example.myapp.todo.ui.items.NetworkStatusIcon
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ItemsScreen(
@@ -31,14 +32,13 @@ fun ItemsScreen(
 ) {
     Log.d("ItemsScreen", "recompose")
     val itemsViewModel = viewModel<ItemsViewModel>(factory = ItemsViewModel.Factory)
+    val context = LocalContext.current.applicationContext as Application
     val itemsUiState by itemsViewModel.uiState.collectAsStateWithLifecycle(
         initialValue = listOf()
     )
 
     val networkViewModel = viewModel<MyNetworkStatusViewModel>(
-        factory = MyNetworkStatusViewModel.Factory(
-            LocalContext.current.applicationContext as Application
-        )
+        factory = MyNetworkStatusViewModel.Factory(context)
     )
 
     Scaffold(
