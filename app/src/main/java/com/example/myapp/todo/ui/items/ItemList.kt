@@ -17,6 +17,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
@@ -35,7 +37,9 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.ui.graphics.RectangleShape
+import com.example.myapp.todo.data.SyncStatus
 
 typealias OnItemFn = (id: String?) -> Unit
 @Composable
@@ -85,13 +89,18 @@ fun ItemDetailCard(item: Item, onItemClick: OnItemFn, onDeleteItem: OnItemFn) {
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.text,
-                    style = MaterialTheme.typography.titleMedium,
-                    textDecoration = if (item.isCompleted) TextDecoration.LineThrough else null,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = item.text,
+                        style = MaterialTheme.typography.titleMedium,
+                        textDecoration = if (item.isCompleted) TextDecoration.LineThrough else null,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    SyncStatusIndicator(item.syncStatus)
+                }
                 if (item.description.isNotEmpty()) {
                     Text(
                         text = item.description,
@@ -133,6 +142,38 @@ fun ItemDetailCard(item: Item, onItemClick: OnItemFn, onDeleteItem: OnItemFn) {
     }
 }
 
+@Composable
+fun SyncStatusIndicator(syncStatus: SyncStatus) {
+    when (syncStatus) {
+        SyncStatus.PENDING -> {
+            Icon(
+                imageVector = Icons.Default.CloudQueue,
+                contentDescription = "Pending sync",
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+        SyncStatus.UPDATED -> {
+            Icon(
+                imageVector = Icons.Default.Sync,
+                contentDescription = "Has updates",
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+        SyncStatus.DELETED -> {
+            Icon(
+                imageVector = Icons.Default.CloudOff,
+                contentDescription = "Pending deletion",
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+        SyncStatus.SYNCED -> {
+            // No indicator for synced items
+        }
+    }
+}
 @Composable
 fun PriorityIndicator(priority: Int) {
     val color = when (priority) {

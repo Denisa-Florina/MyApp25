@@ -2,7 +2,10 @@ package com.example.myapp.todo.ui.items
 
 import android.app.Application
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -30,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.myapp.core.TAG
+import com.example.myapp.todo.data.SyncManager
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -38,6 +43,8 @@ class MyNetworkStatusViewModel(application: Application)
 
     var uiState by mutableStateOf(false)
         private set
+
+    private var wasOffline = false
 
     init {
         createNetworkNotificationChannel(application)
@@ -53,29 +60,61 @@ class MyNetworkStatusViewModel(application: Application)
             }
     }
 
+    private fun canPostNotifications(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+    }
+
 
     private fun collectNetworkStatus() {
         viewModelScope.launch {
-            ConnectivityManagerNetworkMonitor(getApplication())
-                .isOnline
+            val appContext = getApplication<Application>()
+            val networkMonitor = ConnectivityManagerNetworkMonitor(appContext)
+
+            networkMonitor.isOnline
                 .distinctUntilChanged()
                 .collect { isOnline ->
+
+                    Log.d(TAG, "Network status changed: $isOnline")
                     uiState = isOnline
 
-                    // Only show notification if permission granted (Android 13+)
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                        val permissionGranted =
-                            ContextCompat.checkSelfPermission(
-                                getApplication(),
-                                Manifest.permission.POST_NOTIFICATIONS
-                            ) == PackageManager.PERMISSION_GRANTED
-                        if (!permissionGranted) return@collect
+                    if (canPostNotifications(appContext)) {
+                        showNetworkStatusNotification(appContext, isOnline)
                     }
 
-                    showNetworkStatusNotification(getApplication(), isOnline)
+                    if (isOnline && wasOffline) {
+                        Log.d(TAG, "Back online! Scheduling sync...")
+                        SyncManager.scheduleSync(appContext)
+                    }
+
+                    wasOffline = !isOnline
                 }
         }
     }
+
+
+//    private fun collectNetworkStatus() {
+//        viewModelScope.launch {
+//            ConnectivityManagerNetworkMonitor(getApplication()).isOnline.collect { isOnline ->
+//                Log.d(TAG, "Network status changed: $isOnline")
+//
+//                // Trigger sync when coming back online
+//                if (isOnline && wasOffline) {
+//                    Log.d(TAG, "Back online! Scheduling sync...")
+//                    SyncManager.scheduleSync(getApplication())
+//                }
+//
+//                wasOffline = !isOnline
+//                uiState = isOnline
+//            }
+//        }
+//    }
 }
 
 @Composable

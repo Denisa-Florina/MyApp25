@@ -7,9 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.myapp"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.myapp"
@@ -66,6 +64,10 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.datastore.preferences)
+
+    // WorkManager
+    implementation(libs.androidx.work.runtime.ktx)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -73,9 +75,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-    // 2. Ensure you have the Moshi library
-    implementation("com.squareup.moshi:moshi:1.15.1")
 
-    // 3. CRITICAL: Add the code generator via KSP
+    implementation("com.squareup.moshi:moshi:1.15.1")
     ksp("com.squareup.moshi:moshi-kotlin-codegen:1.15.1")
 }

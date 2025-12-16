@@ -4,14 +4,24 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import com.example.myapp.todo.data.Item
+import com.example.myapp.todo.data.SyncStatus
 import com.example.myapp.todo.data.local.ItemDao
 import com.example.myapp.todo.ui.date.DateConverter
 
-// 1. Increment version to 3
-@Database(entities = [Item::class], version = 3)
-@TypeConverters(DateConverter::class)
+class SyncStatusConverter {
+    @TypeConverter
+    fun fromSyncStatus(value: SyncStatus): String = value.name
+
+    @TypeConverter
+    fun toSyncStatus(value: String): SyncStatus = SyncStatus.valueOf(value)
+}
+
+
+@Database(entities = [Item::class], version = 4)
+@TypeConverters(DateConverter::class, SyncStatusConverter::class)
 abstract class MyAppDatabase : RoomDatabase() {
     abstract fun itemDao(): ItemDao
 
@@ -26,7 +36,6 @@ abstract class MyAppDatabase : RoomDatabase() {
                     MyAppDatabase::class.java,
                     "app_database"
                 )
-                    // 2. Add this line for development to avoid crashes on schema changes
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

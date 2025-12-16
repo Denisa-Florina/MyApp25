@@ -47,7 +47,7 @@ fun showNetworkStatusNotification(
         .setSmallIcon(android.R.drawable.stat_notify_sync)
         .setContentTitle("Network status")
         .setContentText(
-            if (isOnline) "🟢 Back online" else "🔴 You are offline"
+            if (isOnline) "🟢 Back online, we can sync the data" else "🔴 You are offline :(("
         )
         .setPriority(NotificationCompat.PRIORITY_DEFAULT)
 

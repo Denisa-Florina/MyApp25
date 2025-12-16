@@ -26,12 +26,16 @@ class ItemRepository(
 
     private fun getBearerToken() = "Bearer ${Api.tokenInterceptor.token}"
 
+    suspend fun getUnsyncedItems(): List<Item> = itemDao.getUnsyncedItems()
+
     suspend fun refresh() {
         Log.d(TAG, "refresh started")
         try {
             val items = itemService.find(authorization = getBearerToken())
             itemDao.deleteAll()
-            items.forEach { itemDao.insert(it) }
+            items.forEach {
+                itemDao.insert(it.copy(syncStatus = SyncStatus.SYNCED))
+            }
             Log.d(TAG, "refresh succeeded")
         } catch (e: Exception) {
             Log.w(TAG, "refresh failed", e)
@@ -78,64 +82,96 @@ class ItemRepository(
 
     suspend fun update(item: Item): Item {
         Log.d(TAG, "update $item...")
-        // Update Local immediately (Optimistic UI)
-        itemDao.update(item)
+
+        // Update Local with UPDATED status
+        val itemToSave = item.copy(syncStatus = SyncStatus.UPDATED)
+        itemDao.update(itemToSave)
 
         try {
-            // Update Server
+            // Try to update server immediately
             val updatedItem = itemService.update(
                 itemId = item._id,
                 item = item,
                 authorization = getBearerToken()
             )
+            // Mark as synced
+            itemDao.updateSyncStatus(item._id, SyncStatus.SYNCED)
             return updatedItem
         } catch (e: Exception) {
-            Log.e(TAG, "Server update failed", e)
-            // Optional: Mark item as 'dirty' to sync later
-            throw e
+            Log.e(TAG, "Server update failed, will sync later", e)
+            // Item remains with UPDATED status for background sync
+            return item
         }
     }
 
     suspend fun save(item: Item): Item {
         Log.d(TAG, "save $item...")
-        // Insert Local immediately so the user sees it
-        itemDao.insert(item)
+
+        // Insert Local with PENDING status
+        itemDao.insert(item.copy(syncStatus = SyncStatus.PENDING))
 
         try {
-            // Send to Server
-            // The server will use the UUID we generated in the Item data class
+            // Try to save to server immediately
             val createdItem = itemService.create(
                 item = item,
                 authorization = getBearerToken()
             )
+            // Mark as synced
+            itemDao.updateSyncStatus(item._id, SyncStatus.SYNCED)
             Log.d(TAG, "save succeeded on server: $createdItem")
             return createdItem
         } catch (e: Exception) {
-            Log.e(TAG, "Server save failed", e)
-            // If server fails, we still have it locally.
-            // You might want to delete it locally or queue it for retry.
-            throw e
+            Log.e(TAG, "Server save failed, will sync later", e)
+            // Item remains with PENDING status for background sync
+            return item
         }
     }
 
     suspend fun delete(itemId: String) {
         Log.d(TAG, "delete $itemId...")
-        // Delete Local immediately (Optimistic UI)
-        itemDao.deleteById(itemId)
+
+        // Mark as deleted locally (soft delete)
+        itemDao.updateSyncStatus(itemId, SyncStatus.DELETED)
 
         try {
-            // Delete from Server
+            // Try to delete from server immediately
             itemService.delete(
                 itemId = itemId,
                 authorization = getBearerToken()
             )
+            // Permanently delete from local DB
+            itemDao.deletePermanently(itemId)
             Log.d(TAG, "delete succeeded on server")
         } catch (e: Exception) {
-            Log.e(TAG, "Server delete failed", e)
-            // If server fails, the local item is already deleted.
-            // You might want to restore it or queue for retry.
-            throw e
+            Log.e(TAG, "Server delete failed, will sync later", e)
+            // Item remains with DELETED status for background sync
         }
+    }
+
+    // Background sync methods (called by SyncWorker)
+    suspend fun syncCreate(item: Item) {
+        val createdItem = itemService.create(
+            item = item,
+            authorization = getBearerToken()
+        )
+        itemDao.updateSyncStatus(item._id, SyncStatus.SYNCED)
+    }
+
+    suspend fun syncUpdate(item: Item) {
+        itemService.update(
+            itemId = item._id,
+            item = item,
+            authorization = getBearerToken()
+        )
+        itemDao.updateSyncStatus(item._id, SyncStatus.SYNCED)
+    }
+
+    suspend fun syncDelete(itemId: String) {
+        itemService.delete(
+            itemId = itemId,
+            authorization = getBearerToken()
+        )
+        itemDao.deletePermanently(itemId)
     }
 
     private suspend fun handleItemDeleted(item: Item) {
@@ -145,12 +181,12 @@ class ItemRepository(
 
     private suspend fun handleItemUpdated(item: Item) {
         Log.d(TAG, "handleItemUpdated...")
-        itemDao.update(item)
+        itemDao.update(item.copy(syncStatus = SyncStatus.SYNCED))
     }
 
     private suspend fun handleItemCreated(item: Item) {
         Log.d(TAG, "handleItemCreated...")
-        itemDao.insert(item)
+        itemDao.insert(item.copy(syncStatus = SyncStatus.SYNCED))
     }
 
     suspend fun deleteAll() {
