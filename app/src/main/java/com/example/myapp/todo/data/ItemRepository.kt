@@ -78,23 +78,69 @@ class ItemRepository(
 
     suspend fun update(item: Item): Item {
         Log.d(TAG, "update $item...")
-        val updatedItem =
-            itemService.update(itemId = item._id, item = item, authorization = getBearerToken())
-        Log.d(TAG, "update $item succeeded")
-        handleItemUpdated(updatedItem)
-        return updatedItem
+        // Update Local immediately (Optimistic UI)
+        itemDao.update(item)
+
+        try {
+            // Update Server
+            val updatedItem = itemService.update(
+                itemId = item._id,
+                item = item,
+                authorization = getBearerToken()
+            )
+            return updatedItem
+        } catch (e: Exception) {
+            Log.e(TAG, "Server update failed", e)
+            // Optional: Mark item as 'dirty' to sync later
+            throw e
+        }
     }
 
     suspend fun save(item: Item): Item {
         Log.d(TAG, "save $item...")
-        val createdItem = itemService.create(item = item, authorization = getBearerToken())
-        Log.d(TAG, "save $item succeeded")
-        handleItemCreated(createdItem)
-        return createdItem
+        // Insert Local immediately so the user sees it
+        itemDao.insert(item)
+
+        try {
+            // Send to Server
+            // The server will use the UUID we generated in the Item data class
+            val createdItem = itemService.create(
+                item = item,
+                authorization = getBearerToken()
+            )
+            Log.d(TAG, "save succeeded on server: $createdItem")
+            return createdItem
+        } catch (e: Exception) {
+            Log.e(TAG, "Server save failed", e)
+            // If server fails, we still have it locally.
+            // You might want to delete it locally or queue it for retry.
+            throw e
+        }
+    }
+
+    suspend fun delete(itemId: String) {
+        Log.d(TAG, "delete $itemId...")
+        // Delete Local immediately (Optimistic UI)
+        itemDao.deleteById(itemId)
+
+        try {
+            // Delete from Server
+            itemService.delete(
+                itemId = itemId,
+                authorization = getBearerToken()
+            )
+            Log.d(TAG, "delete succeeded on server")
+        } catch (e: Exception) {
+            Log.e(TAG, "Server delete failed", e)
+            // If server fails, the local item is already deleted.
+            // You might want to restore it or queue for retry.
+            throw e
+        }
     }
 
     private suspend fun handleItemDeleted(item: Item) {
-        Log.d(TAG, "handleItemDeleted - todo $item")
+        Log.d(TAG, "handleItemDeleted $item")
+        itemDao.deleteById(item._id)
     }
 
     private suspend fun handleItemUpdated(item: Item) {

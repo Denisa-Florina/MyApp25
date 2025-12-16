@@ -15,6 +15,7 @@ import com.example.myapp.core.TAG
 import com.example.myapp.todo.data.Item
 import com.example.myapp.todo.data.ItemRepository
 import kotlinx.coroutines.launch
+import java.util.Date
 
 data class ItemUiState(
     val itemId: String? = null,
@@ -51,26 +52,42 @@ class ItemViewModel(private val itemId: String?, private val itemRepository: Ite
     }
 
 
-    fun saveOrUpdateItem(text: String) {
+    fun saveOrUpdateItem(
+        text: String,
+        description: String,
+        priority: Int,
+        isCompleted: Boolean,
+        dueDate: Date?
+    ) {
         viewModelScope.launch {
-            Log.d(TAG, "saveOrUpdateItem...");
+            Log.d(TAG, "saveOrUpdateItem...")
             try {
                 uiState = uiState.copy(submitResult = Result.Loading)
-                val item = uiState.item.copy(text = text)
-                val savedItem: Item;
-                if (itemId == null) {
-                    savedItem = itemRepository.save(item)
+
+                val updatedItem = uiState.item.copy(
+                    text = text,
+                    description = description,
+                    priority = priority,
+                    isCompleted = isCompleted,
+                    dueDate = dueDate
+                )
+
+                val savedItem = if (itemId == null) {
+                    itemRepository.save(updatedItem)
                 } else {
-                    savedItem = itemRepository.update(item)
+                    itemRepository.update(updatedItem)
                 }
-                Log.d(TAG, "saveOrUpdateItem succeeeded");
+
+                Log.d(TAG, "saveOrUpdateItem succeeded")
                 uiState = uiState.copy(submitResult = Result.Success(savedItem))
+
             } catch (e: Exception) {
-                Log.d(TAG, "saveOrUpdateItem failed");
+                Log.d(TAG, "saveOrUpdateItem failed")
                 uiState = uiState.copy(submitResult = Result.Error(e))
             }
         }
     }
+
 
     companion object {
         fun Factory(itemId: String?): ViewModelProvider.Factory = viewModelFactory {

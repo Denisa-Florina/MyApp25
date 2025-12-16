@@ -2,6 +2,7 @@ package com.example.myapp.todo.data.remote
 
 import com.example.myapp.todo.data.Item
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Headers
@@ -30,4 +31,10 @@ interface ItemService {
         @Path("id") itemId: String?,
         @Body item: Item
     ): Item
+
+    @DELETE("/api/item/{id}")
+    suspend fun delete(
+        @Header("Authorization") authorization: String,
+        @Path("id") itemId: String
+    )
 }

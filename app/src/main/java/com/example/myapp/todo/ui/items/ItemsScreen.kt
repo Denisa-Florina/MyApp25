@@ -1,5 +1,6 @@
 package com.example.myapp.todo.ui.items
 
+import android.app.Application
 import android.util.Log
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -14,6 +15,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -22,18 +24,33 @@ import com.example.myapp.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ItemsScreen(onItemClick: (id: String?) -> Unit, onAddItem: () -> Unit, onLogout: () -> Unit) {
+fun ItemsScreen(
+    onItemClick: (id: String?) -> Unit,
+    onAddItem: () -> Unit,
+    onLogout: () -> Unit
+) {
     Log.d("ItemsScreen", "recompose")
     val itemsViewModel = viewModel<ItemsViewModel>(factory = ItemsViewModel.Factory)
     val itemsUiState by itemsViewModel.uiState.collectAsStateWithLifecycle(
         initialValue = listOf()
     )
+
+    val networkViewModel = viewModel<MyNetworkStatusViewModel>(
+        factory = MyNetworkStatusViewModel.Factory(
+            LocalContext.current.applicationContext as Application
+        )
+    )
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(text = stringResource(id = R.string.items)) },
                 actions = {
-                    Button(onClick = onLogout) { Text("Logout") }
+                    NetworkStatusIcon(isOnline = networkViewModel.uiState)
+
+                    Button(onClick = onLogout) {
+                        Text("Logout")
+                    }
                 }
             )
         },
@@ -49,6 +66,10 @@ fun ItemsScreen(onItemClick: (id: String?) -> Unit, onAddItem: () -> Unit, onLog
         ItemList(
             itemList = itemsUiState,
             onItemClick = onItemClick,
+            onDeleteItem = { itemId ->
+                Log.d("ItemsScreen", "delete item $itemId")
+                itemId?.let { itemsViewModel.deleteItem(it) }
+            },
             modifier = Modifier.padding(it)
         )
     }

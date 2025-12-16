@@ -28,6 +28,18 @@ class ItemsViewModel(private val itemRepository: ItemRepository) : ViewModel() {
         }
     }
 
+    fun deleteItem(itemId: String) {
+        Log.d(TAG, "deleteItem $itemId...")
+        viewModelScope.launch {
+            try {
+                itemRepository.delete(itemId)
+                Log.d(TAG, "deleteItem succeeded")
+            } catch (e: Exception) {
+                Log.e(TAG, "deleteItem failed", e)
+            }
+        }
+    }
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
