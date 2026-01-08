@@ -20,6 +20,9 @@ class ItemRepository(
 ) {
     val itemStream by lazy { itemDao.getAll() }
 
+    // Track items being updated to avoid WebSocket race conditions
+    private val updatingItems = mutableSetOf<String>()
+
     init {
         Log.d(TAG, "init")
     }
@@ -83,73 +86,105 @@ class ItemRepository(
     suspend fun update(item: Item): Item {
         Log.d(TAG, "update $item...")
 
-        // Update Local with UPDATED status
-        val itemToSave = item.copy(syncStatus = SyncStatus.UPDATED)
-        itemDao.update(itemToSave)
+        // Mark this item as being updated (to ignore WebSocket events)
+        updatingItems.add(item._id)
 
         try {
-            // Try to update server immediately
-            val updatedItem = itemService.update(
-                itemId = item._id,
-                item = item,
-                authorization = getBearerToken()
-            )
-            // Mark as synced
-            itemDao.updateSyncStatus(item._id, SyncStatus.SYNCED)
-            return updatedItem
-        } catch (e: Exception) {
-            Log.e(TAG, "Server update failed, will sync later", e)
-            // Item remains with UPDATED status for background sync
-            return item
+            // Update Local with UPDATED status
+            val itemToSave = item.copy(syncStatus = SyncStatus.UPDATED)
+            itemDao.update(itemToSave)
+
+            try {
+                // Try to update server immediately
+                val updatedItem = itemService.update(
+                    itemId = item._id,
+                    item = itemToSave,
+                    authorization = getBearerToken()
+                )
+
+                // Mark as synced
+                itemDao.updateSyncStatus(item._id, SyncStatus.SYNCED)
+
+                Log.d(TAG, "update succeeded on server")
+                return itemToSave.copy(syncStatus = SyncStatus.SYNCED)
+            } catch (e: Exception) {
+                Log.e(TAG, "Server update failed, will sync later", e)
+                // Item remains with UPDATED status for background sync
+                return itemToSave
+            }
+        } finally {
+            // Remove from updating set after a delay (allow WebSocket message to arrive and be ignored)
+            kotlinx.coroutines.delay(500)
+            updatingItems.remove(item._id)
         }
     }
 
     suspend fun save(item: Item): Item {
         Log.d(TAG, "save $item...")
 
-        // Insert Local with PENDING status
-        itemDao.insert(item.copy(syncStatus = SyncStatus.PENDING))
+        // Mark as being created
+        updatingItems.add(item._id)
 
         try {
-            // Try to save to server immediately
-            val createdItem = itemService.create(
-                item = item,
-                authorization = getBearerToken()
-            )
-            // Mark as synced
-            itemDao.updateSyncStatus(item._id, SyncStatus.SYNCED)
-            Log.d(TAG, "save succeeded on server: $createdItem")
-            return createdItem
-        } catch (e: Exception) {
-            Log.e(TAG, "Server save failed, will sync later", e)
-            // Item remains with PENDING status for background sync
-            return item
+            // Insert Local with PENDING status
+            val itemToSave = item.copy(syncStatus = SyncStatus.PENDING)
+            itemDao.insert(itemToSave)
+
+            try {
+                // Try to save to server immediately
+                val createdItem = itemService.create(
+                    item = item,
+                    authorization = getBearerToken()
+                )
+
+                // Mark as synced
+                itemDao.updateSyncStatus(item._id, SyncStatus.SYNCED)
+
+                Log.d(TAG, "save succeeded on server: $createdItem")
+                return itemToSave.copy(syncStatus = SyncStatus.SYNCED)
+            } catch (e: Exception) {
+                Log.e(TAG, "Server save failed, will sync later", e)
+                // Item remains with PENDING status for background sync
+                return itemToSave
+            }
+        } finally {
+            kotlinx.coroutines.delay(500)
+            updatingItems.remove(item._id)
         }
     }
 
     suspend fun delete(itemId: String) {
         Log.d(TAG, "delete $itemId...")
 
-        // Mark as deleted locally (soft delete)
-        itemDao.updateSyncStatus(itemId, SyncStatus.DELETED)
+        // Mark as being deleted
+        updatingItems.add(itemId)
 
         try {
-            // Try to delete from server immediately
-            itemService.delete(
-                itemId = itemId,
-                authorization = getBearerToken()
-            )
-            // Permanently delete from local DB
-            itemDao.deletePermanently(itemId)
-            Log.d(TAG, "delete succeeded on server")
-        } catch (e: Exception) {
-            Log.e(TAG, "Server delete failed, will sync later", e)
-            // Item remains with DELETED status for background sync
+            // Mark as deleted locally (soft delete)
+            itemDao.updateSyncStatus(itemId, SyncStatus.DELETED)
+
+            try {
+                // Try to delete from server immediately
+                itemService.delete(
+                    itemId = itemId,
+                    authorization = getBearerToken()
+                )
+                // Permanently delete from local DB
+                itemDao.deletePermanently(itemId)
+                Log.d(TAG, "delete succeeded on server")
+            } catch (e: Exception) {
+                Log.e(TAG, "Server delete failed, will sync later", e)
+                // Item remains with DELETED status for background sync
+            }
+        } finally {
+            kotlinx.coroutines.delay(500)
+            updatingItems.remove(itemId)
         }
     }
 
     // Background sync methods (called by SyncWorker)
     suspend fun syncCreate(item: Item) {
+        Log.d(TAG, "syncCreate for item ${item._id}")
         val createdItem = itemService.create(
             item = item,
             authorization = getBearerToken()
@@ -158,6 +193,7 @@ class ItemRepository(
     }
 
     suspend fun syncUpdate(item: Item) {
+        Log.d(TAG, "syncUpdate for item ${item._id}")
         itemService.update(
             itemId = item._id,
             item = item,
@@ -167,6 +203,7 @@ class ItemRepository(
     }
 
     suspend fun syncDelete(itemId: String) {
+        Log.d(TAG, "syncDelete for item $itemId")
         itemService.delete(
             itemId = itemId,
             authorization = getBearerToken()
@@ -176,16 +213,54 @@ class ItemRepository(
 
     private suspend fun handleItemDeleted(item: Item) {
         Log.d(TAG, "handleItemDeleted $item")
+
+        // Don't handle if we're currently deleting this item
+        if (updatingItems.contains(item._id)) {
+            Log.d(TAG, "Ignoring WebSocket delete for item being deleted locally: ${item._id}")
+            return
+        }
+
         itemDao.deleteById(item._id)
     }
 
     private suspend fun handleItemUpdated(item: Item) {
-        Log.d(TAG, "handleItemUpdated...")
-        itemDao.update(item.copy(syncStatus = SyncStatus.SYNCED))
+        Log.d(TAG, "handleItemUpdated for ${item._id}...")
+
+        // CRITICAL: Ignore WebSocket updates for items we're currently updating
+        if (updatingItems.contains(item._id)) {
+            Log.d(TAG, "Ignoring WebSocket update for item being updated locally: ${item._id}")
+            return
+        }
+
+        // Check if item exists locally with different data
+        val localItems = itemDao.getAll()
+        var shouldUpdate = true
+
+        localItems.collect { items ->
+            val localItem = items.find { it._id == item._id }
+            if (localItem != null && localItem.syncStatus == SyncStatus.UPDATED) {
+                // Local item has unsaved changes, don't overwrite
+                Log.d(TAG, "Local item has unsaved changes, ignoring WebSocket update")
+                shouldUpdate = false
+                return@collect
+            }
+        }
+
+        if (shouldUpdate) {
+            Log.d(TAG, "Applying WebSocket update for ${item._id}")
+            itemDao.update(item.copy(syncStatus = SyncStatus.SYNCED))
+        }
     }
 
     private suspend fun handleItemCreated(item: Item) {
-        Log.d(TAG, "handleItemCreated...")
+        Log.d(TAG, "handleItemCreated for ${item._id}...")
+
+        // Don't handle if we're currently creating this item
+        if (updatingItems.contains(item._id)) {
+            Log.d(TAG, "Ignoring WebSocket create for item being created locally: ${item._id}")
+            return
+        }
+
         itemDao.insert(item.copy(syncStatus = SyncStatus.SYNCED))
     }
 

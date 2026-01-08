@@ -72,6 +72,9 @@ class ItemViewModel(private val itemId: String?, private val itemRepository: Ite
                     dueDate = dueDate
                 )
 
+                Log.d(TAG, "Updating item with _id: ${updatedItem._id}")
+                Log.d(TAG, "Item data: text=$text, desc=$description, priority=$priority, completed=$isCompleted")
+
                 val savedItem = if (itemId == null) {
                     itemRepository.save(updatedItem)
                 } else {
