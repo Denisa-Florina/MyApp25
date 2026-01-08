@@ -20,7 +20,7 @@ class SyncStatusConverter {
 }
 
 
-@Database(entities = [Item::class], version = 4)
+@Database(entities = [Item::class], version = 5)
 @TypeConverters(DateConverter::class, SyncStatusConverter::class)
 abstract class MyAppDatabase : RoomDatabase() {
     abstract fun itemDao(): ItemDao

@@ -57,7 +57,9 @@ class ItemViewModel(private val itemId: String?, private val itemRepository: Ite
         description: String,
         priority: Int,
         isCompleted: Boolean,
-        dueDate: Date?
+        dueDate: Date?,
+        latitude: Double?,
+        longitude: Double?
     ) {
         viewModelScope.launch {
             Log.d(TAG, "saveOrUpdateItem...")
@@ -69,7 +71,9 @@ class ItemViewModel(private val itemId: String?, private val itemRepository: Ite
                     description = description,
                     priority = priority,
                     isCompleted = isCompleted,
-                    dueDate = dueDate
+                    dueDate = dueDate,
+                    latitude = latitude,
+                    longitude = longitude
                 )
 
                 Log.d(TAG, "Updating item with _id: ${updatedItem._id}")

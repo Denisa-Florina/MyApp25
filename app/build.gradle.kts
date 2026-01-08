@@ -64,6 +64,14 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.datastore.preferences)
+    // Permissions
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
+
+// Location
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+
+// Google Maps Compose
+    implementation("com.google.maps.android:maps-compose:4.4.1")
 
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)

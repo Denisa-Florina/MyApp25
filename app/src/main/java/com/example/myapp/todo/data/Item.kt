@@ -24,5 +24,7 @@ data class Item(
     val dueDate: Date? = null,
     val priority: Int = 0,
     val isCompleted: Boolean = false,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
     @Json(ignore = true) val syncStatus: SyncStatus = SyncStatus.PENDING
 )
