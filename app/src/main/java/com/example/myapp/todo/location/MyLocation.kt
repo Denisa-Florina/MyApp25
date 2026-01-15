@@ -1,4 +1,3 @@
-package com.example.myapp3.location
 
 import android.Manifest
 import android.app.Application
@@ -7,10 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.myapp.todo.location.MyLocationViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.ilazar.myapp3.util.RequirePermissions
-
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun MyLocation(modifier: Modifier = Modifier) {

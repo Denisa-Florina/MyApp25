@@ -1,4 +1,3 @@
-package com.example.myapp.todo.location
 
 import android.app.Application
 import android.location.Location
@@ -11,7 +10,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.myapp3.util.LocationMonitor
 import kotlinx.coroutines.launch
 
 class MyLocationViewModel(application: Application) : AndroidViewModel(application) {

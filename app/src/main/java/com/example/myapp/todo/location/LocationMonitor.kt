@@ -1,4 +1,3 @@
-package com.example.myapp3.util
 
 import android.annotation.SuppressLint
 import android.content.Context

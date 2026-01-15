@@ -1,5 +1,7 @@
 package com.example.myapp.todo.ui.item
 
+import MyLocation
+import MyLocationViewModel
 import android.Manifest
 import android.app.Application
 import android.util.Log
@@ -56,10 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapp.R
 import com.example.myapp.core.Result
-import com.example.myapp.todo.location.MyLocationViewModel
-import com.example.myapp3.location.MyLocation
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.ilazar.myapp3.util.RequirePermissions
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
