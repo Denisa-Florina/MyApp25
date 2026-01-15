@@ -1,6 +1,11 @@
 package com.example.myapp.todo.ui.items
 
 import android.app.Application
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -16,45 +21,100 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.myapp.todo.ui.items.ConnectivityManagerNetworkMonitor
+import com.example.myapp.core.TAG
+import com.example.myapp.todo.data.SyncManager
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
-class MyNetworkStatusViewModel(application: Application) : AndroidViewModel(application) {
+class MyNetworkStatusViewModel(application: Application)
+    : AndroidViewModel(application) {
+
     var uiState by mutableStateOf(false)
         private set
 
+    private var wasOffline = false
+
     init {
+        createNetworkNotificationChannel(application)
         collectNetworkStatus()
     }
 
-    private fun collectNetworkStatus() {
-        viewModelScope.launch {
-            ConnectivityManagerNetworkMonitor(getApplication()).isOnline.collect {
-                uiState = it;
+    companion object {
+        fun Factory(application: Application): ViewModelProvider.Factory =
+            viewModelFactory {
+                initializer {
+                    MyNetworkStatusViewModel(application)
+                }
             }
+    }
+
+    private fun canPostNotifications(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
         }
     }
 
-    companion object {
-        fun Factory(application: Application): ViewModelProvider.Factory = viewModelFactory {
-            initializer {
-                MyNetworkStatusViewModel(application)
-            }
+
+    private fun collectNetworkStatus() {
+        viewModelScope.launch {
+            val appContext = getApplication<Application>()
+            val networkMonitor = ConnectivityManagerNetworkMonitor(appContext)
+
+            networkMonitor.isOnline
+                .distinctUntilChanged()
+                .collect { isOnline ->
+
+                    Log.d(TAG, "Network status changed: $isOnline")
+                    uiState = isOnline
+
+                    if (canPostNotifications(appContext)) {
+                        showNetworkStatusNotification(appContext, isOnline)
+                    }
+
+                    if (isOnline && wasOffline) {
+                        Log.d(TAG, "Back online! Scheduling sync...")
+                        SyncManager.scheduleSync(appContext)
+                    }
+
+                    wasOffline = !isOnline
+                }
         }
     }
+
+
+//    private fun collectNetworkStatus() {
+//        viewModelScope.launch {
+//            ConnectivityManagerNetworkMonitor(getApplication()).isOnline.collect { isOnline ->
+//                Log.d(TAG, "Network status changed: $isOnline")
+//
+//                // Trigger sync when coming back online
+//                if (isOnline && wasOffline) {
+//                    Log.d(TAG, "Back online! Scheduling sync...")
+//                    SyncManager.scheduleSync(getApplication())
+//                }
+//
+//                wasOffline = !isOnline
+//                uiState = isOnline
+//            }
+//        }
+//    }
 }
 
 @Composable
@@ -95,4 +155,3 @@ fun NetworkStatusIcon(isOnline: Boolean) {
         }
     }
 }
-

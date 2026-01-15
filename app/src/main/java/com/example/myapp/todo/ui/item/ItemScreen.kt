@@ -1,10 +1,13 @@
 package com.example.myapp.todo.ui.item
 
+import android.Manifest
+import android.app.Application
 import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,7 +19,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -25,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -43,41 +49,48 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapp.R
 import com.example.myapp.core.Result
+import com.example.myapp.todo.location.MyLocationViewModel
+import com.example.myapp3.location.MyLocation
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.ilazar.myapp3.util.RequirePermissions
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ItemScreen(itemId: String?, onClose: () -> Unit) {
     val itemViewModel = viewModel<ItemViewModel>(factory = ItemViewModel.Factory(itemId))
     val itemUiState = itemViewModel.uiState
-
-    // State for form fields
     var text by rememberSaveable { mutableStateOf(itemUiState.item.text) }
     var description by rememberSaveable { mutableStateOf(itemUiState.item.description) }
-    // We store priority as float for the Slider, convert to Int for saving
     var priority by rememberSaveable { mutableStateOf(itemUiState.item.priority.toFloat()) }
     var isCompleted by rememberSaveable { mutableStateOf(itemUiState.item.isCompleted) }
-
-    // Date State
+    var latitude by rememberSaveable { mutableStateOf(itemUiState.item.latitude) }
+    var longitude by rememberSaveable { mutableStateOf(itemUiState.item.longitude) }
     var dueDate by rememberSaveable { mutableStateOf(itemUiState.item.dueDate) }
     var showDatePicker by remember { mutableStateOf(false) }
 
-    Log.d("ItemScreen", "recompose, text = $text")
+    val locationViewModel = viewModel<MyLocationViewModel>(
+        factory = MyLocationViewModel.Factory(
+            LocalContext.current.applicationContext as Application
+        )
+    )
+    val currentLocation = locationViewModel.uiState
 
-    // When submitting finishes, close screen
-    LaunchedEffect(itemUiState.submitResult) {
-        if (itemUiState.submitResult is Result.Success) {
-            onClose()
-        }
+    Log.d("ItemScreen", "recompose, text = $text, lat = $latitude, long = $longitude")
+
+    // Start location tracking
+    LaunchedEffect(Unit) {
+        locationViewModel.start()
     }
 
     // When loading existing item, update fields once
@@ -90,6 +103,8 @@ fun ItemScreen(itemId: String?, onClose: () -> Unit) {
             priority = item.priority.toFloat()
             isCompleted = item.isCompleted
             dueDate = item.dueDate
+            latitude = item.latitude
+            longitude = item.longitude
             initialized = true
         }
     }
@@ -133,8 +148,11 @@ fun ItemScreen(itemId: String?, onClose: () -> Unit) {
                             description = description,
                             priority = priority.roundToInt(),
                             isCompleted = isCompleted,
-                            dueDate = dueDate
+                            dueDate = dueDate,
+                            latitude = latitude,
+                            longitude = longitude
                         )
+                        onClose()
                     }) {
                         Text("Save")
                     }
@@ -146,9 +164,9 @@ fun ItemScreen(itemId: String?, onClose: () -> Unit) {
             modifier = Modifier
                 .padding(paddingValues)
                 .fillMaxSize()
-                .padding(horizontal = 16.dp) // Add side padding
-                .verticalScroll(rememberScrollState()), // Make it scrollable
-            verticalArrangement = Arrangement.spacedBy(16.dp) // Consistent spacing
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (itemUiState.loadResult is Result.Loading) {
                 Column(
@@ -195,7 +213,7 @@ fun ItemScreen(itemId: String?, onClose: () -> Unit) {
                         value = priority,
                         onValueChange = { priority = it },
                         valueRange = 0f..5f,
-                        steps = 4, // 0 to 5 steps
+                        steps = 4,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Row(
@@ -209,8 +227,6 @@ fun ItemScreen(itemId: String?, onClose: () -> Unit) {
 
                 // 3. DATE PICKER
                 val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
-
-                // Interaction source to capture clicks on read-only field
                 val dateSource = remember { MutableInteractionSource() }
                 LaunchedEffect(dateSource) {
                     dateSource.interactions.collect {
@@ -246,11 +262,18 @@ fun ItemScreen(itemId: String?, onClose: () -> Unit) {
                     label = { Text("Description") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp), // Taller input for description
+                        .height(120.dp),
                     maxLines = 5
                 )
 
-                // 5. COMPLETED SWITCH
+                MyLocation(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(250.dp)
+                )
+
+
+                // 6. COMPLETED SWITCH
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,

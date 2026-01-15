@@ -7,6 +7,14 @@ import com.squareup.moshi.JsonClass
 import java.util.Date
 import java.util.UUID
 
+enum class SyncStatus {
+    SYNCED,
+    PENDING,
+    UPDATED,
+    DELETED
+}
+
+
 @JsonClass(generateAdapter = true)
 @Entity(tableName = "items")
 data class Item(
@@ -15,5 +23,8 @@ data class Item(
     val description: String = "",
     val dueDate: Date? = null,
     val priority: Int = 0,
-    val isCompleted: Boolean = false
+    val isCompleted: Boolean = false,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    @Json(ignore = true) val syncStatus: SyncStatus = SyncStatus.PENDING
 )
