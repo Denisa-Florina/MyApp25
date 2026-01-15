@@ -13,19 +13,18 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.launch
 
 class MyLocationViewModel(application: Application) : AndroidViewModel(application) {
-
     var uiState by mutableStateOf<Location?>(null)
         private set
 
-    private var collecting = false
+    init {
+        collectLocation()
+    }
 
-    fun start() {
-        if (collecting) return
-        collecting = true
-
+    private fun collectLocation() {
         viewModelScope.launch {
             LocationMonitor(getApplication()).currentLocation.collect {
-                uiState = it
+                Log.d("MyLocationViewModel", "collect $it")
+                uiState = it;
             }
         }
     }
@@ -38,4 +37,3 @@ class MyLocationViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 }
-

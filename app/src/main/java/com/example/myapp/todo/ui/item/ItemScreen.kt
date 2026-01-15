@@ -5,6 +5,7 @@ import MyLocationViewModel
 import android.Manifest
 import android.app.Application
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -20,19 +21,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -69,6 +70,8 @@ import kotlin.math.roundToInt
 fun ItemScreen(itemId: String?, onClose: () -> Unit) {
     val itemViewModel = viewModel<ItemViewModel>(factory = ItemViewModel.Factory(itemId))
     val itemUiState = itemViewModel.uiState
+
+    // States for the form
     var text by rememberSaveable { mutableStateOf(itemUiState.item.text) }
     var description by rememberSaveable { mutableStateOf(itemUiState.item.description) }
     var priority by rememberSaveable { mutableStateOf(itemUiState.item.priority.toFloat()) }
@@ -78,21 +81,16 @@ fun ItemScreen(itemId: String?, onClose: () -> Unit) {
     var dueDate by rememberSaveable { mutableStateOf(itemUiState.item.dueDate) }
     var showDatePicker by remember { mutableStateOf(false) }
 
+    // Logic for FAB animation
+    val isReadyToSave = text.isNotBlank()
+
     val locationViewModel = viewModel<MyLocationViewModel>(
         factory = MyLocationViewModel.Factory(
             LocalContext.current.applicationContext as Application
         )
     )
-    val currentLocation = locationViewModel.uiState
 
-    Log.d("ItemScreen", "recompose, text = $text, lat = $latitude, long = $longitude")
-
-    // Start location tracking
-    LaunchedEffect(Unit) {
-        locationViewModel.start()
-    }
-
-    // When loading existing item, update fields once
+    // Initialization logic for editing existing items
     var initialized by remember { mutableStateOf(itemId == null) }
     LaunchedEffect(itemId, itemUiState.loadResult) {
         if (!initialized && itemUiState.loadResult !is Result.Loading) {
@@ -118,45 +116,56 @@ fun ItemScreen(itemId: String?, onClose: () -> Unit) {
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let {
-                        dueDate = Date(it)
-                    }
+                    datePickerState.selectedDateMillis?.let { dueDate = Date(it) }
                     showDatePicker = false
-                }) {
-                    Text("OK")
-                }
+                }) { Text("OK") }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
             }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+        ) { DatePicker(state = datePickerState) }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = stringResource(id = R.string.item)) },
-                actions = {
-                    Button(onClick = {
-                        itemViewModel.saveOrUpdateItem(
-                            text = text,
-                            description = description,
-                            priority = priority.roundToInt(),
-                            isCompleted = isCompleted,
-                            dueDate = dueDate,
-                            latitude = latitude,
-                            longitude = longitude
+                title = { Text(text = stringResource(id = R.string.item)) }
+            )
+        },
+        floatingActionButton = {
+            // Butonul de Salvare Plutitor cu Animație
+            FloatingActionButton(
+                onClick = {
+                    itemViewModel.saveOrUpdateItem(
+                        text = text,
+                        description = description,
+                        priority = priority.roundToInt(),
+                        isCompleted = isCompleted,
+                        dueDate = dueDate,
+                        latitude = latitude,
+                        longitude = longitude
+                    )
+                    onClose()
+                },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Save"
+                    )
+                    AnimatedVisibility(visible = isReadyToSave) {
+                        Text(
+                            text = "Save",
+                            modifier = Modifier.padding(start = 8.dp)
                         )
-                        onClose()
-                    }) {
-                        Text("Save")
                     }
                 }
-            )
+            }
         }
     ) { paddingValues ->
         Column(
@@ -168,21 +177,12 @@ fun ItemScreen(itemId: String?, onClose: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (itemUiState.loadResult is Result.Loading) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) { CircularProgressIndicator() }
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             } else {
-
                 if (itemUiState.submitResult is Result.Loading) {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                }
-
-                if (itemUiState.loadResult is Result.Error) {
-                    Text(
-                        text = "Failed to load item - ${(itemUiState.loadResult as Result.Error).exception?.message}",
-                        color = MaterialTheme.colorScheme.error
-                    )
                 }
 
                 // 1. TITLE INPUT
@@ -207,7 +207,6 @@ fun ItemScreen(itemId: String?, onClose: () -> Unit) {
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
-
                     Slider(
                         value = priority,
                         onValueChange = { priority = it },
@@ -215,24 +214,13 @@ fun ItemScreen(itemId: String?, onClose: () -> Unit) {
                         steps = 4,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Low", style = MaterialTheme.typography.bodySmall)
-                        Text("High", style = MaterialTheme.typography.bodySmall)
-                    }
                 }
 
                 // 3. DATE PICKER
                 val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
                 val dateSource = remember { MutableInteractionSource() }
                 LaunchedEffect(dateSource) {
-                    dateSource.interactions.collect {
-                        if (it is PressInteraction.Release) {
-                            showDatePicker = true
-                        }
-                    }
+                    dateSource.interactions.collect { if (it is PressInteraction.Release) showDatePicker = true }
                 }
 
                 OutlinedTextField(
@@ -246,12 +234,7 @@ fun ItemScreen(itemId: String?, onClose: () -> Unit) {
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    interactionSource = dateSource,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                        disabledBorderColor = MaterialTheme.colorScheme.outline,
-                        disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    interactionSource = dateSource
                 )
 
                 // 4. DESCRIPTION INPUT
@@ -259,18 +242,14 @@ fun ItemScreen(itemId: String?, onClose: () -> Unit) {
                     value = description,
                     onValueChange = { description = it },
                     label = { Text("Description") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
+                    modifier = Modifier.fillMaxWidth().height(120.dp),
                     maxLines = 5
                 )
 
+                // 5. MAP
                 MyLocation(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(250.dp)
+                    modifier = Modifier.fillMaxWidth().height(250.dp)
                 )
-
 
                 // 6. COMPLETED SWITCH
                 Row(
@@ -282,10 +261,7 @@ fun ItemScreen(itemId: String?, onClose: () -> Unit) {
                         .padding(vertical = 8.dp)
                 ) {
                     Text(text = "Mark as Completed", style = MaterialTheme.typography.bodyLarge)
-                    Switch(
-                        checked = isCompleted,
-                        onCheckedChange = { isCompleted = it }
-                    )
+                    Switch(checked = isCompleted, onCheckedChange = { isCompleted = it })
                 }
 
                 if (itemUiState.submitResult is Result.Error) {
@@ -295,14 +271,9 @@ fun ItemScreen(itemId: String?, onClose: () -> Unit) {
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                // Spacer final pentru a nu fi acoperit conținutul de butonul plutitor
+                Spacer(modifier = Modifier.height(80.dp))
             }
         }
     }
-}
-
-@Preview
-@Composable
-fun PreviewItemScreen() {
-    ItemScreen(itemId = "0", onClose = {})
 }
