@@ -1,5 +1,11 @@
 package com.example.myapp.todo.ui.items
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +44,8 @@ import java.util.Locale
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.RectangleShape
 import com.example.myapp.todo.data.SyncStatus
 
@@ -170,7 +178,6 @@ fun SyncStatusIndicator(syncStatus: SyncStatus) {
             )
         }
         SyncStatus.SYNCED -> {
-            // No indicator for synced items
         }
     }
 }
@@ -181,9 +188,22 @@ fun PriorityIndicator(priority: Int) {
         3 -> Color(0xFFFFA000)
         else -> Color(0xFF4CAF50)
     }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "PriorityPulse")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "Pulse"
+    )
+
     Box(
         modifier = Modifier
             .size(12.dp)
+            .scale(if (priority >= 4) scale else 1f)
             .background(color = color, shape = RectangleShape)
     )
 }
