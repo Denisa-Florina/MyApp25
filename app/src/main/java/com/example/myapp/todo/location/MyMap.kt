@@ -1,4 +1,3 @@
-package com.example.myapp3.location
 
 import android.util.Log
 import androidx.compose.foundation.layout.fillMaxSize
